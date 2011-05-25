@@ -44,6 +44,8 @@ Some usage examples for the `parse_dp_float.py` (double precision) script:
     Exact Decimal = + 2^(0) * (0x13333333333333 * 2^(-52))
                   = 1.1999999999999999555910790149937383830547332763671875
 
+  
+
     $>./parse_dp_float.py -- "7fef ffff ffff ffff"  "8000 0000 0000 0000" "0.33333" "fff0 0000 0000 0000"
 
     Bytes         = 0x7fefffffffffffff
@@ -81,13 +83,14 @@ Some usage examples for the `parse_dp_float.py` (double precision) script:
     Mantissa      = 0x0
     Exact Decimal = -Infinity
 
+  
+
     $> ./parse_dp_float.py --float --format='%.5f' "3fd5 5555 5555 5555"
     0.33333
 
 The single precision script works completely equivalently:
 
-    $> ./parse_sp_float.py
-    "ff80 0000" c0000000 0.3333333333333333
+    $> ./parse_sp_float.py "ff80 0000" c0000000 0.3333333333333333
 
     Bytes         = 0xff800000
     Float         = -inf
