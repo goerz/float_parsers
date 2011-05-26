@@ -61,7 +61,10 @@ def float2hex(float_val):
     """ Take a float and return 8 hex digits representing it in single
         precision.
     """
-    return binascii.hexlify(struct.pack('!f', float_val))
+    try:
+        return binascii.hexlify(struct.pack('!f', float_val))
+    except OverflowError:
+        return "7f800000" # Infinity
 
 def test_bit(int_type, offset):
     """ Return a nonzero result, 2**offset, if the bit at 'offset' is one. """
@@ -127,7 +130,7 @@ def parse_hex(hexstring, float_format='%.6e', no_decimal=False):
 
 def main(argv=None):
     """ Function to run if script is called directly """
-    hex_pattern = re.compile(r'^[ 0-9abcdefABCEDF]{8,}$')
+    hex_pattern = re.compile(r'^[0-9abcdefABCEDF]{8}$')
     if argv is None:
         argv = sys.argv
         arg_parser = OptionParser(
@@ -154,15 +157,17 @@ def main(argv=None):
             arg_parser.error("No values given. "
                              "Try '--help' for more information")
         for value in args[1:]:
-            if hex_pattern.match(value):
-                value = value.replace(" ", "").lower()
-            else:
+            value = value.replace(" ", "").lower().strip()
+            if value.startswith("0x"):
+                value = value[2:]
+            if not hex_pattern.match(value):
                 try:
                     value = float(value)
                     value = float2hex(value)
-                except ValueError:
+                except (ValueError, OverflowError):
                     arg_parser.error("Value '%s' " % value +
-                    "is neither a valid hex string nor a valid float" )
+                    "is neither a valid 8-digit hex string "
+                    "nor a valid single precision float" )
             # value at this point is a lowercase hex string without spaces
             if options.float:
                 print options.format \
