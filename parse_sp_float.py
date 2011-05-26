@@ -11,7 +11,11 @@ import re
 import binascii
 from optparse import OptionParser
 
-BIAS = 127
+BIAS = 127                 # constant to be subtracted from the stored exponent
+SIGN_BIT = 31              # bit index at which the sign is stored
+EXP_BIT = 23               # bit index at which the exponent starts
+EXP_MASK = 0x0007fffff     # bit-mask to remove exponent, leaving mantissa
+NAN_EXP = 0xff             # special exponent which encodes NaN/Infinity
 
 
 def float2decimal(fval):
@@ -32,7 +36,7 @@ def float2decimal(fval):
             mantissa *= 2.0
             exponent -= 1
         mantissa = int(mantissa)
-    except OverflowError (OverflowError, ValueError):
+    except (OverflowError, ValueError):
         return "---"
 
     oldcontext = decimal.getcontext()
@@ -82,19 +86,19 @@ def parse_hex(hexstring, float_format='%.6e', no_decimal=False):
     """
     bits = int('0x%s' % hexstring, 16)
     sign = '+1'
-    if test_bit(bits, 31) > 0:
+    if test_bit(bits, SIGN_BIT) > 0:
         sign = '-1'
-    bits = clear_bit(bits, 31)
-    sp_exp = bits >> 23
-    mantissa = bits & 0x0007fffff # mask the exponent bits
+    bits = clear_bit(bits, SIGN_BIT)
+    stored_exp = bits >> EXP_BIT
+    mantissa = bits & EXP_MASK # mask the exponent bits
 
     print ""
     print "Bytes         = 0x%s" % hexstring
     print "Float         = "+ float_format \
                            % struct.unpack('!f', hexstring.decode('hex'))[0]
     print "Sign          = %s" % sign
-    if sp_exp == 0:
-        print "Exponent      = 0x%x (Special: Zero/Subnormal)" % sp_exp
+    if stored_exp == 0:
+        print "Exponent      = 0x%x (Special: Zero/Subnormal)" % stored_exp
         print "Mantissa      = 0x%x" % mantissa
         if not no_decimal:
             if mantissa == 0:
@@ -102,8 +106,8 @@ def parse_hex(hexstring, float_format='%.6e', no_decimal=False):
             else:
                 print "Exact Decimal = %s (subnormal)" \
                     % float2decimal(hex2float(hexstring))
-    elif sp_exp == 0xFF:
-        print "Exponent      = 0x%x (Special: NaN/Infinity)" % sp_exp
+    elif stored_exp == NAN_EXP:
+        print "Exponent      = 0x%x (Special: NaN/Infinity)" % stored_exp
         print "Mantissa      = 0x%x" % mantissa
         if not no_decimal:
             if mantissa == 0:
@@ -111,10 +115,14 @@ def parse_hex(hexstring, float_format='%.6e', no_decimal=False):
             else:
                 print "Exact Decimal = NaN"
     else:
-        print "Exponent      = 0x%x = %i (bias %i)" % (sp_exp, sp_exp, BIAS)
+        print "Exponent      = 0x%x = %i (bias %i)" % (stored_exp,
+                                                       stored_exp, BIAS)
         print "Mantissa      = 0x%x" % mantissa
         if not no_decimal:
-            print "Exact Decimal = %s" % float2decimal(hex2float(hexstring))
+            mantissa = set_bit(mantissa, EXP_BIT) # set the implicit bit
+            print "Exact Decimal = %s 2^(%i) * [0x%x * 2^(-23)]" \
+                                % (sign[0], stored_exp-BIAS, mantissa)
+            print "              = %s" % float2decimal(hex2float(hexstring))
 
 
 def main(argv=None):
@@ -126,17 +134,17 @@ def main(argv=None):
         usage="usage: %prog [options] values",
         description = __doc__)
         arg_parser.add_option(
-          '--no-decimal', action='store_true', dest='no_decimal', 
+          '--no-decimal', action='store_true', dest='no_decimal',
           help="Skip printing the exact represented decimal "
           "(which can take a long time to compute) ")
         arg_parser.add_option(
-          '--decimal', action='store_true', dest='decimal', 
+          '--decimal', action='store_true', dest='decimal',
           help="Only print the exact represented decimal")
         arg_parser.add_option(
-          '--float', action='store_true', dest='float', 
+          '--float', action='store_true', dest='float',
           help="Only print the represented float")
         arg_parser.add_option(
-          '--hex', action='store_true', dest='hex', 
+          '--hex', action='store_true', dest='hex',
           help="Only print the 16-digit hex representation")
         arg_parser.add_option(
           '--format', action='store', dest='format', default='%.6e',
