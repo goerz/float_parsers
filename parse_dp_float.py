@@ -80,12 +80,13 @@ def parse_hex(hexstring, float_format='%.15e', no_decimal=False):
         parse it, and print detailed information about the represented float
         value.
     """
-    sign_exp = int('0x%s' % hexstring[0:3], 16)
+    bits = int('0x%s' % hexstring, 16)
     sign = '+1'
-    if test_bit(sign_exp, 11) > 0:
+    if test_bit(bits, 63) > 0:
         sign = '-1'
-    dp_exp = clear_bit(sign_exp, 11)
-    mantissa = int('0x%s' % hexstring[3:], 16)
+    bits = clear_bit(bits, 63)
+    dp_exp = bits >> 52
+    mantissa = bits & 0x000fffffffffffff # mask the exponent bits
 
     print ""
     print "Bytes         = 0x%s" % hexstring
@@ -101,7 +102,7 @@ def parse_hex(hexstring, float_format='%.15e', no_decimal=False):
             else:
                 print "Exact Decimal = %s (subnormal)" \
                     % float2decimal(hex2float(hexstring))
-    elif dp_exp in (0x7ff, 0xfff):
+    elif dp_exp == 0x7ff:
         print "Exponent      = 0x%x (Special: NaN/Infinity)" % dp_exp
         print "Mantissa      = 0x%x" % mantissa
         if not no_decimal:
@@ -113,7 +114,7 @@ def parse_hex(hexstring, float_format='%.15e', no_decimal=False):
         print "Exponent      = 0x%x = %i (bias %i)" % (dp_exp, dp_exp, BIAS)
         print "Mantissa      = 0x%x" % mantissa
         if not no_decimal:
-            print "Exact Decimal = %s 2^(%i) * (0x1%013x * 2^(-52))" \
+            print "Exact Decimal = %s 2^(%i) * [0x1%013x * 2^(-52)]" \
                                 % (sign[0], dp_exp-BIAS, mantissa)
             print "              = %s" % float2decimal(hex2float(hexstring))
 
