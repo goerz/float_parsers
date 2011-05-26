@@ -86,7 +86,7 @@ def parse_hex(hexstring, float_format='%.6e', no_decimal=False):
         sign = '-1'
     bits = clear_bit(bits, 31)
     sp_exp = bits >> 23
-    mantissa = bits & 0x711111 # mask the exponent bits
+    mantissa = bits & 0x0007fffff # mask the exponent bits
 
     print ""
     print "Bytes         = 0x%s" % hexstring
