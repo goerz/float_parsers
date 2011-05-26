@@ -11,6 +11,8 @@ import re
 import binascii
 from optparse import OptionParser
 
+BIAS = 1023
+
 
 def float2decimal(fval):
     """ Convert a floating point number to a Decimal with no loss of
@@ -73,7 +75,7 @@ def clear_bit(int_type, offset):
     return(int_type & mask)
 
 
-def parse_hex(hexstring, bias=1023, float_format='%.15e', no_decimal=False):
+def parse_hex(hexstring, float_format='%.15e', no_decimal=False):
     """ Take a 8-byte hex string (16 digits) representing a double precision,
         parse it, and print detailed information about the represented float
         value.
@@ -108,11 +110,11 @@ def parse_hex(hexstring, bias=1023, float_format='%.15e', no_decimal=False):
             else:
                 print "Exact Decimal = NaN"
     else:
-        print "Exponent      = 0x%x = %i (bias %i)" % (dp_exp, dp_exp, bias)
+        print "Exponent      = 0x%x = %i (bias %i)" % (dp_exp, dp_exp, BIAS)
         print "Mantissa      = 0x%x" % mantissa
         if not no_decimal:
             print "Exact Decimal = %s 2^(%i) * (0x1%013x * 2^(-52))" \
-                                % (sign[0], dp_exp-bias, mantissa)
+                                % (sign[0], dp_exp-BIAS, mantissa)
             print "              = %s" % float2decimal(hex2float(hexstring))
 
 
@@ -124,9 +126,6 @@ def main(argv=None):
         arg_parser = OptionParser(
         usage="usage: %prog [options] values",
         description = __doc__)
-        arg_parser.add_option(
-          '--bias', action='store', dest='bias', default=1023, 
-          help="Exponent bias of the floating point model (default=1023)")
         arg_parser.add_option(
           '--no-decimal', action='store_true', dest='no_decimal', 
           help="Skip printing the exact represented decimal "
@@ -166,8 +165,7 @@ def main(argv=None):
             elif options.decimal:
                 print float2decimal(hex2float(value))
             else:
-                parse_hex(value, bias=options.bias, 
-                          float_format=options.format,
+                parse_hex(value, float_format=options.format,
                           no_decimal=options.no_decimal)
 
 
