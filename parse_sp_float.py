@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Take 8-digit-hex-strings or float values and print detailed
 information about the single precision float they represent
